@@ -78,6 +78,7 @@ class NBclassifier:
             Calculates the postirior propability P( class | feature )
         '''
         results = []
+        class_score = []
         X = np.array(X)
 
         for query in X:  # Iterate over test sample 
@@ -97,9 +98,10 @@ class NBclassifier:
                 probs_outcome[outcome] = posterior
         
             result = max(probs_outcome, key = lambda x: probs_outcome[x])
+            class_score.append(list(probs_outcome.values()))
             results.append(result)
         
-        return np.array(results)
+        return np.array(results), class_score
 
 
 
@@ -117,7 +119,7 @@ def test():
     x_test = test_data.drop(test_data.columns[1], axis=1)
     y_test = test_data[data.columns[1]]
 
-    predictions = clf.predict(x_test.iloc[:, 1:])
+    predictions, class_score = clf.predict(x_test.iloc[:, 1:])
 
 if __name__ == '__main__':
   test()
