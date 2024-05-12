@@ -12,7 +12,7 @@ class NBclassifier:
     def __init__(self, y_train, x_train):
         self.class_priors = {}
         self.likelihoods = defaultdict(dict)
-        self.pred_poiors = {}
+        self.pred_poiors = defaultdict(dict)
         self.features = {}
         self.y_train = y_train
         self.x_train = x_train
@@ -24,15 +24,16 @@ class NBclassifier:
 
         self.clac_class_priors()
         self.calc_likehood()
+        self.calc_predictor_prior()
 
     
     def clac_class_priors(self):
         '''
             Calculate Prior Class Probability for each class - P(class)
         '''
-        for outcome in np.unique(self.y_train):  # iterate over each unique class 
-            outcome_count = sum(self.y_train == outcome)  # count occurncace of currect class 
-            self.class_priors[outcome] = outcome_count / len(self.y_train)  # claculate and store class prior for particular class(outcome)
+        for outcome in np.unique(self.y_train):  # Iterate over each unique class 
+            outcome_count = sum(self.y_train == outcome)  # Count occurncace of currect class 
+            self.class_priors[outcome] = outcome_count / len(self.y_train)  # Claculate and store class prior for particular class(outcome)
             print(f'The prior of class {outcome} is:  {self.class_priors[outcome]} \n')
         
 
@@ -55,25 +56,52 @@ class NBclassifier:
 
                 for feat_val, count in feat_val_counts.items():  # Iterate over each unique value on feature (feature) correspond to class (outcome)
                     feat_val = feat_val if isinstance(feat_val, str) else str(feat_val)
-                    self.likelihoods[feature][feat_val + '_' + outcome] = count/outcome_count  # calculate it by ( number of occurances / count of outcome class )
+                    self.likelihoods[self.features[feature]][feat_val + '_' + outcome] = count/outcome_count  # calculate it by ( number of occurances / count of outcome class )
 
-    def _calc_predictor_prior(self):
+    def calc_predictor_prior(self):
         '''
             calculates the prior probabilities of each value of each feature - P(x) 
         '''
-        for feature in self.features:  
-            feat_vals = self.X_train[feature].value_counts().to_dict()  # count uniqe each value in feature (feature) 
+        train_size = len(self.x_train)
+
+        for feature_idx in range(len(self.features)):  
+            feat_vals = self.x_train.iloc[:,feature_idx].value_counts().to_dict()  # count uniqe each value in feature (feature) 
 
             for feat_val, count in feat_vals.items():   # Iterate over each unique value
-                self.pred_priors[feature][feat_val] = count/self.train_size  # calculate prior for each value.
+                feat_val = feat_val if isinstance(feat_val, str) else str(feat_val)
+                self.pred_poiors[self.features[feature_idx]][feat_val] = count / train_size  # calculate prior for each value.
 
     
     # Calculates Posterior probability P(class |features)
-    def predict(self):
+    def predict(self, X):
         '''
-            Calculates the postirior propability 
+            Calculates the postirior propability P( class | feature )
         '''
+        results = []
+        X = np.array(X)
+
+        for query in X:  # Iterate over test sample 
+            probs_outcome = {}
+            for outcome in np.unique(self.y_train):   
+                prior = self.class_priors[outcome]
+                likelihood = 1
+                evidence = 1   # Prior of each target feature
+
+                # Claculate likehoos and prior for each feature
+                for feat, feat_val in zip(self.features, query):
+                    feat_val = feat_val if isinstance(feat_val, str) else str(feat_val)
+                    likelihood *= self.likelihoods[feat][feat_val + '_' + outcome]
+                    evidence *= self.pred_poiors[feat][feat_val]
+
+                posterior = (likelihood * prior) / (evidence)
+                probs_outcome[outcome] = posterior
         
+            result = max(probs_outcome, key = lambda x: probs_outcome[x])
+            results.append(result)
+        
+        return np.array(results)
+
+
 
 
 def test():
@@ -83,6 +111,13 @@ def test():
     
     clf = NBclassifier(y_train, x_train.iloc[:, 1:])
     clf.fit()
+
+    # import test data 
+    test_data = pd.read_csv('breast-cancer-test.csv')
+    x_test = test_data.drop(test_data.columns[1], axis=1)
+    y_test = test_data[data.columns[1]]
+
+    predictions = clf.predict(x_test.iloc[:, 1:])
 
 if __name__ == '__main__':
   test()
