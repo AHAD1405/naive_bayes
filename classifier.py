@@ -34,7 +34,7 @@ class NBclassifier:
         for outcome in np.unique(self.y_train):  # Iterate over each unique class 
             outcome_count = sum(self.y_train == outcome)  # Count occurncace of currect class 
             self.class_priors[outcome] = outcome_count / len(self.y_train)  # Claculate and store class prior for particular class(outcome)
-            print(f'The prior of class {outcome} is:  {self.class_priors[outcome]} \n')
+            
         
 
     
@@ -102,24 +102,3 @@ class NBclassifier:
             results.append(result)
         
         return np.array(results), class_score
-
-
-
-
-def test():
-    data = pd.read_csv('breast-cancer-training.csv')
-    x_train = data.drop(data.columns[1], axis=1)
-    y_train = data[data.columns[1]]
-    
-    clf = NBclassifier(y_train, x_train.iloc[:, 1:])
-    clf.fit()
-
-    # import test data 
-    test_data = pd.read_csv('breast-cancer-test.csv')
-    x_test = test_data.drop(test_data.columns[1], axis=1)
-    y_test = test_data[data.columns[1]]
-
-    predictions, class_score = clf.predict(x_test.iloc[:, 1:])
-
-if __name__ == '__main__':
-  test()
